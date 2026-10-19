@@ -26,6 +26,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
 
@@ -66,6 +73,11 @@ jobs:
 
           echo "Project directory: $PROJECT_DIR"
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+          
+          # Auto-update compileSdk to 36 in build.gradle(.kts) files if found
+          find "$PROJECT_DIR" -name "build.gradle*" -exec sed -i 's/compileSdk 35/compileSdk 36/g' {} +
+          find "$PROJECT_DIR" -name "build.gradle*" -exec sed -i 's/compileSdk = 35/compileSdk = 36/g' {} +
+          
           ls -la "$PROJECT_DIR"
 
       - name: Build debug APK
