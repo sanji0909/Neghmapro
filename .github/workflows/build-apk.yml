@@ -26,13 +26,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: |
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
 
@@ -59,7 +52,6 @@ jobs:
 
           if [ -z "$BUILD_FILE" ]; then
             echo "ERROR: No Android build.gradle(.kts) found in ZIP"
-            find extracted -maxdepth 4 -type f | head -n 100
             exit 1
           fi
 
@@ -73,24 +65,17 @@ jobs:
 
           echo "Project directory: $PROJECT_DIR"
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-          
-          # Auto-update compileSdk to 36 in build.gradle(.kts) files if found
-          find "$PROJECT_DIR" -name "build.gradle*" -exec sed -i 's/compileSdk 35/compileSdk 36/g' {} +
-          find "$PROJECT_DIR" -name "build.gradle*" -exec sed -i 's/compileSdk = 35/compileSdk = 36/g' {} +
-          
-          ls -la "$PROJECT_DIR"
+
+          # Bypass compileSdk check for newer libraries
+          echo "android.suppressUnsupportedCompileSdk=35" >> "$PROJECT_DIR/gradle.properties"
+          echo "android.suppressUnsupportedCompileSdk=36" >> "$PROJECT_DIR/gradle.properties"
 
       - name: Build debug APK
         shell: bash
         run: |
           cd "${{ steps.project.outputs.dir }}"
-
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew --no-daemon --stacktrace assembleDebug
-          else
-            gradle --no-daemon --stacktrace assembleDebug
-          fi
+          chmod +x gradlew || true
+          ./gradlew --no-daemon --stacktrace assembleDebug
 
       - name: Upload NaghmaPro APK
         uses: actions/upload-artifact@v4
